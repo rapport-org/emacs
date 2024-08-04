@@ -1,0 +1,127 @@
+image: nixery.dev/shell/nix/git/gnugrep/wget/emacs
+
+pages:
+  variables:
+    HOME: ${PWD}
+    RAPPORT_EMACS__URI_LIBDIR: "${PWD}"
+    RAPPORT__URI_VAULT: "${PWD}"
+    RAPPORT__URI_VAULT_CFGS: "${PWD}"
+
+  script:
+    - wget 'https://raw.githubusercontent.com/hniksic/emacs-htmlize/master/htmlize.el'
+    - emacs --batch -Q --eval '(setq org-confirm-babel-evaluate nil)' --file=control.org -f org-mode --load htmlize.el -f org-html-export-to-html --kill
+    - mkdir public
+    - mv control.html public/index.html
+  artifacts:
+    paths:
+      # The folder that contains the files to be exposed at the Page URL
+      - public
+  rules:
+    # This ensures that only pushes to the default branch will trigger a pages deploy
+    - if: $CI_COMMIT_REF_NAME == $CI_DEFAULT_BRANCH
+# --- --- ---
+name: GitHub Actions Demo
+run-name: ${{ github.actor }} is testing out GitHub Actions 🚀
+on: [push]
+jobs:
+  Explore-GitHub-Actions:
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "🎉 The job was automatically triggered by a ${{ github.event_name }} event."
+      - run: echo "🐧 This job is now running on a ${{ runner.os }} server hosted by GitHub!"
+      - run: echo "🔎 The name of your branch is ${{ github.ref }} and your repository is ${{ github.repository }}."
+      - name: Check out repository code
+        uses: actions/checkout@v4
+      - run: echo "💡 The ${{ github.repository }} repository has been cloned to the runner."
+      - run: echo "🖥️ The workflow is now ready to test your code on the runner."
+      - name: List files in the repository
+        run: |
+          ls ${{ github.workspace }}
+      - run: echo "🍏 This job's status is ${{ job.status }}."
+# --- --- ---
+name: CI
+
+# ...
+
+jobs:
+  build:
+    name: Test
+    runs-on: ubuntu-latest
+    steps:
+      - name: render-site
+        run: <run the tests with code coverage>
+
+      - name: Setup Pages
+        if: github.ref == 'refs/heads/main'
+        uses: actions/configure-pages@v3
+
+      - name: Upload Artifact
+        if: github.ref == 'refs/heads/main'
+        uses: actions/upload-pages-artifact@v1
+        with:
+          # location of the coverage artifacts
+          path: "./coverage"
+
+  test:
+    name: Test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Run Tests
+        run: <run the tests with code coverage>
+
+      - name: Setup Pages
+        if: github.ref == 'refs/heads/main'
+        uses: actions/configure-pages@v3
+
+      - name: Upload Artifact
+        if: github.ref == 'refs/heads/main'
+        uses: actions/upload-pages-artifact@v1
+        with:
+          # location of the coverage artifacts
+          path: "./coverage"
+
+  deploy-coverage:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    needs: test
+    
+    permissions:
+      pages: write
+      id-token: write
+
+    environment:
+      # environment created automatically by GitHub
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v2
+
+# --- --- ---
+name: github-pages-publish
+on:
+  push:
+    branches: [ main ]
+jobs:
+  github-pages-publish:
+    runs-on: ubuntu-latest
+    container:
+      image: nixery.dev/shell/nix/git/gnugrep/wget/emacs
+    steps:
+      - name: Check for dockerenv file
+        run: (ls /.dockerenv && echo Found dockerenv) || (echo No dockerenv)
+      - name: fetch a recent htmlize
+        run: wget 'https://raw.githubusercontent.com/hniksic/emacs-htmlize/master/htmlize.el'
+      - name: render using ox-html
+        run: emacs --batch -Q --eval '(setq org-confirm-babel-evaluate nil)' --file=control.org -f org-mode --load htmlize.el -f org-html-export-to-html --kill
+      - name: 
+        run: mkdir public
+      - name: asdf
+        run: mv control.html public/index.html
+      - name: Deploy GH Pages
+        uses: peaceiris/actions-gh-pages@v3
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./public
