@@ -1,0 +1,30 @@
+stages:
+- test
+sast:
+  stage: test
+include:
+- template: Security/SAST.gitlab-ci.yml
+
+# ----- ----- ----- ----- ----- #
+
+image: nixery.dev/shell/nix/git/gnugrep/wget/emacs
+
+pages:
+  variables:
+    HOME: ${PWD}
+    RAPPORT_EMACS__URI_LIBDIR: "${PWD}"
+    RAPPORT__URI_VAULT: "${PWD}"
+    RAPPORT__URI_VAULT_CFGS: "${PWD}"
+
+  script:
+    - wget 'https://raw.githubusercontent.com/hniksic/emacs-htmlize/master/htmlize.el'
+    - emacs --batch -Q --eval '(setq org-confirm-babel-evaluate nil)' --file=control.org -f org-mode --load htmlize.el -f org-html-export-to-html --kill
+    - mkdir public
+    - mv control.html public/index.html
+  artifacts:
+    paths:
+      # The folder that contains the files to be exposed at the Page URL
+      - public
+  rules:
+    # This ensures that only pushes to a matching branch will trigger a pages deploy
+    - if: $CI_COMMIT_REF_NAME == 'main'
